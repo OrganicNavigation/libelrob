@@ -16,6 +16,11 @@
  ***************************************************************************/
 
 #include <string.h>
+
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_permutation.h>
+#include <gsl/gsl_cblas.h>
+
 #include "Kmatrix.h"
 
  void AllocMatrix (KMatrix	*pMat, int nRow, int nCol)
@@ -406,10 +411,25 @@ void A_Eq_MinusAPlusB  (KMatrix *A, KMatrix *B)
 // Mat and Inverse will be modified
 // Mat = inv(Mat)
 // iPiv = P
-void	 ComputeInverse (KMatrix *Mat, int *iPiv)
+void	 ComputeInverse (KMatrix *Mat)
 {
-    clapack_dgetrf (CblasRowMajor, Mat->nRow, Mat->nCol, Mat->Element, Mat->nCol, iPiv);
-    clapack_dgetri (CblasRowMajor, Mat->nRow, Mat->Element, Mat->nCol, iPiv);
+    if (Mat->nRow != Mat->nCol) {
+      printf ("ComputeInverse -> Not square\n");
+      exit (-1);
+    }
+
+    int signum;
+    gsl_permutation* perm = gsl_permutation_alloc(Mat->nRow);
+    gsl_matrix* lu = gsl_matrix_alloc(Mat->nRow, Mat->nCol);
+    gsl_matrix_view inverse = gsl_matrix_view_array(Mat->Element, Mat->nRow,
+      Mat->nCol);
+
+    gsl_matrix_memcpy(lu, &inverse.matrix);
+    gsl_linalg_LU_decomp(lu, perm, &signum);
+    gsl_linalg_LU_invert(lu, perm, &inverse.matrix);
+
+    gsl_matrix_free(lu);
+    gsl_permutation_free(perm);
 }
 
 /*                [ 1.0 2.0 3.0 ]

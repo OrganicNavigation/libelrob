@@ -51,7 +51,7 @@ typedef struct _KFilter
 
   int	isEKF;	/* Says if it is an Extended Kalman Filer*/
   void	*EKF_Params;		/* Pointer to a structure containing all parameters needed for computing EKF F and H matrices*/
-  void (*ComputeEKF_F_Matrix)  (struct _KFilter *);   /* A pointer to the function used for computing the F matrix for the EKF case*/ 
+  void (*ComputeEKF_F_Matrix)  (struct _KFilter *);   /* A pointer to the function used for computing the F matrix for the EKF case*/
   void (*ComputeEKF_H_Matrix)  (struct _KFilter *);  	/* A pointer to the function used for computing the H matrix for the EKF case*/
   void (*StatePred)  (struct _KFilter *);  		/* A pointer to the function used for computing the nonlinear state prediction*/
   void (*MeasurementPred)  (struct _KFilter *);  /* A pointer to the function used for computing the nonlinear measurement prediction*/
@@ -74,7 +74,6 @@ typedef struct _KFilter
   KMatrix iS;	/* iS(k+1)		Inverse of S*/
   KMatrix W;     	/* W(k+1)   	Filter Gain (nx x nz)*/
   KMatrix	Tmp;	/* Temporary matrix for internal use only (max(nx,nu,nz) x max(nx,nu,nz))*/
-  int		*iPiv;/* For internal use only*/
 
   struct timeval	TimeStamp;
 }KFilter;
@@ -111,7 +110,6 @@ typedef struct _InformationFilter
   KMatrix R;     	/* R(k)    	  Measurement noise (nz x nz)*/
   KMatrix iR;     /* !R(k)    	  Inverse of the measurement noise (nz x nz)*/
   KMatrix Tmp;	/* Temporary matrix for internal use only (max(ny,nz) x max(ny,nz))*/
-  int	    *iPiv;/* For internal use only*/
 }InformationFilter;
 
 /* km, the sensor information is actually containing the data
@@ -121,7 +119,7 @@ typedef struct _InformationFilter
    The SensorInformation contains structures that can be computed
    a-priori in an off-line fashion.
 
-   Question: why is the measurement vector z included in this 
+   Question: why is the measurement vector z included in this
    process? */
 typedef struct _SensorInformation {
   int		nz;
@@ -139,7 +137,7 @@ typedef struct _SensorInformation {
 }SensorInformation;
 
 
-/* [km] the MultisensorInfoFilter is the workhorse of data fusion 
+/* [km] the MultisensorInfoFilter is the workhorse of data fusion
    -> also contains pointers to functions calculating the specific structures.
    The whole concept is based on information filter type */
 typedef struct _MultiSensorInfoFilter
@@ -171,7 +169,6 @@ typedef struct _MultiSensorInfoFilter
   KMatrix upd_y;	/* sum of [Ht(j) !R(j) zp(j)], (ny x 1),  j = 0..sensorNr*/
   KMatrix upd_invP;	/* sum of [Ht(j) !R(j) H(j)], (ny x ny)*/
   KMatrix Tmp;		/* Temporary matrix for internal use only (ny x ny)*/
-  int	    *iPiv;	      /* For internal use only*/
 }MultiSensorInfoFilter;
 
 /* Storage functions for the KalmanFilter. It is used to store the Kalman filter state

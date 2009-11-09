@@ -8,12 +8,11 @@
   description          : implementation of the functions for time handling
  ***************************************************************************/
 
+#define _ISOC99_SOURCE
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
 #include <time.h>
-/*#include <sys/timeb.h>
-#include <sys/time.h>*/
 #include "Etime.h"
 #include "Edebug.h"
 

@@ -26,9 +26,6 @@
 #include "random.h"
 #endif
 
-#include "atlas_enum.h"
-#include "clapack.h"
-
 typedef double KMATRIX_TYPE;
 
 typedef struct _matrix
@@ -77,7 +74,7 @@ void	ABAt_Plus_CDCt (KMatrix *A, KMatrix *B, KMatrix *C, KMatrix *D, KMatrix *Re
 void	ABAt_Plus_C (KMatrix *A, KMatrix *B, KMatrix *C, KMatrix *Result, KMatrix *Tmp, char plusOrMinus);
 void	AtBA_Plus_C (KMatrix *A, KMatrix *B, KMatrix *C, KMatrix *Result, KMatrix *Tmp);
 void  C_Eq_ABPlusC (KMatrix *A, KMatrix *B, KMatrix *C);
-void	ComputeInverse (KMatrix *Mat, int *iPiv);
+void	ComputeInverse (KMatrix *Mat);
 int   MatCompare (KMatrix *MatA, KMatrix *MatB);
 void	X_Eq_X_Minus_Y(KMatrix *x, KMatrix *y);
 void	Y_Eq_X_Plus_Y(KMatrix *x, KMatrix *y);

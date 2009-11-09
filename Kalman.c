@@ -14,8 +14,12 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-#include "Kalman.h"
+
 #include <string.h>
+
+#include <gsl/gsl_cblas.h>
+
+#include "Kalman.h"
 
 #define  TEST_VERBOSE 0
 
@@ -51,11 +55,6 @@ void  KalmanFree (KFilter	*pFilter)
   DeleteMatrix (&pFilter->iS);
   DeleteMatrix (&pFilter->W);
   DeleteMatrix (&pFilter->Tmp);
-#ifdef RTAI
-    kfree (&pFilter->iPiv);
-#else
-	free (&pFilter->iPiv);
-#endif
 }
 
 // Alloc all matrices and vectors for the Kalman filter. All values are set to zero
@@ -100,17 +99,6 @@ int KalmanInit (KFilter	*pFilter, int dx, int du, int dz, int useG, int isEKF, v
 	AllocMatrix (&pFilter->u, pFilter->nu, 1); 						// Init the known input vector
 	AllocMatrix (&pFilter->z, pFilter->nz, 1); 						// Init the measurement vector
 	AllocMatrix (&pFilter->pz, pFilter->nz, 1); 						// Init the measurement prediction vector
-
-#ifdef RTAI
-	pFilter->iPiv = (int *) kmalloc (pFilter->nmax, sizeof (int));
-#else
-	pFilter->iPiv = (int *) calloc (pFilter->nmax, sizeof (int));
-
-	if (pFilter->iPiv == NULL)	{
-  		fprintf (stderr, "KalmanAllocMatrix : Not enough memory !\n");
-		exit (-1);
-	}
-#endif
 
 	// Alloc matrices
 	AllocMatrix (&pFilter->F, pFilter->nx, pFilter->nx);				// Init the state transition matrix
@@ -478,7 +466,7 @@ void KalmanStateUpdate(KFilter	 *pFilter)
 		// W = eP * Ht * !S
 		// ----------------------------------
 		CopyRawMatrix (&pFilter->S, &pFilter->iS);  	// They have the same size then copy raw
-		ComputeInverse (&pFilter->iS, pFilter->iPiv);
+		ComputeInverse (&pFilter->iS);
 
 		/* Tmp = Ht * iS  */
 		cblas_dgemm (CblasRowMajor, CblasTrans, CblasNoTrans,    // H is transposed
@@ -535,7 +523,7 @@ int InformationFilterInit (InformationFilter	*pFilter, int dy, int dz, int isRSt
 	pFilter->isEIF = isEIF;
 	pFilter->EIF_Params = EIF_params;
 
-	/* [km] the prediction/Jacobian computing is done only for the 
+	/* [km] the prediction/Jacobian computing is done only for the
 	   case of Extended Information Filter */
 	if (pFilter->isEIF)	{
 		pFilter->ComputeEIF_F_Matrix =  pF_function;
@@ -557,18 +545,6 @@ int InformationFilterInit (InformationFilter	*pFilter, int dy, int dz, int isRSt
 	AllocMatrix (&pFilter->px, pFilter->ny, 1);
 	AllocMatrix (&pFilter->z, pFilter->nz, 1); 						// Init the measurement vector
 
-	/* [km] pivoting matrix for calculating the inverse (cblas) */
-#ifdef RTAI
-	pFilter->iPiv = (int *) kmalloc (pFilter->nmax, sizeof (int));
-#else
-	pFilter->iPiv = (int *) calloc (pFilter->nmax, sizeof (int));
-
-	if (pFilter->iPiv == NULL)	{
-  		fprintf (stderr, "InfoFilterAllocMatrix : Not enough memory !\n");
-		exit (-1);
-	}
-#endif
-
 	// Alloc matrices
 	AllocMatrix (&pFilter->F, pFilter->ny, pFilter->ny);
 	AllocMatrix (&pFilter->H, pFilter->nz, pFilter->ny);
@@ -588,7 +564,7 @@ void SetupRMatrix (InformationFilter	*pFilter, KMATRIX_TYPE *pRarray)
 {
   SetMatrix (&pFilter->R, pRarray);
   SetMatrix (&pFilter->iR, pRarray);
-  ComputeInverse (&pFilter->iR, pFilter->iPiv);   // iR = !R
+  ComputeInverse (&pFilter->iR);   // iR = !R
 }
 
 void  InformationFilterFree (InformationFilter	*pFilter)
@@ -608,11 +584,6 @@ void  InformationFilterFree (InformationFilter	*pFilter)
   DeleteMatrix (&pFilter->ey);
   DeleteMatrix (&pFilter->py);
   DeleteMatrix (&pFilter->px);
-#ifdef RTAI
-    kfree (&pFilter->iPiv);
-#else
-	free (&pFilter->iPiv);
-#endif
 }
 
 // Single sensor prediction
@@ -635,12 +606,12 @@ void InformationFilterStatePrediction(InformationFilter	*pFilter)
   Y_Eq_AX (&pFilter->F, &pFilter->py, &pFilter->py);  // py = F * py
 
   CopyRawMatrix (&pFilter->pP, &pFilter->ipP);  	// They have the same size then copy raw
-  ComputeInverse (&pFilter->ipP, pFilter->iPiv);   // ipP = !P
+  ComputeInverse (&pFilter->ipP);                 // ipP = !P
 
   /* [km] got the information state prediction */
   Y_Eq_AX (&pFilter->ipP, &pFilter->py, &pFilter->py);  // py = !pP * py
 
-  // Finally compute x^(k|k-1) 
+  // Finally compute x^(k|k-1)
   /* [km] obtained as x^(k|k-1)=pP*py; */
   Y_Eq_AX (&pFilter->pP, &pFilter->py, &pFilter->px);
 }
@@ -661,7 +632,7 @@ void InformationFilterStateUpdate(InformationFilter	*pFilter)
    // y^(k) = y^(k|k-1) + H(k)' * !R(k) * z_prim(k) <-> ey = py + Ht * iR * z
   if (!pFilter->isRStatic){    // Compute the inverse at each step if R is not static
     CopyRawMatrix (&pFilter->R, &pFilter->iR);
-    ComputeInverse (&pFilter->iR, pFilter->iPiv);   // iR = !R
+    ComputeInverse (&pFilter->iR);   // iR = !R
   }
 
   Y_Eq_AX (&pFilter->iR, &pFilter->z, &pFilter->ey);  // ey = iR * z
@@ -674,7 +645,7 @@ void InformationFilterStateUpdate(InformationFilter	*pFilter)
 
   // Compute x^(k) = P(k) * y^(k)
   CopyRawMatrix (&pFilter->iP, &pFilter->P);
-  ComputeInverse (&pFilter->P, pFilter->iPiv);            // P = !iP
+  ComputeInverse (&pFilter->P);            // P = !iP
 
   /* [km] the state estimate is obtained based on the current
      state information filter and the covariance matrix */
@@ -722,17 +693,6 @@ void MultiSensorFilterInit (MultiSensorInfoFilter	*pFilter, int ny, int sensorNr
       AllocMatrix (&pFilter->G, pFilter->ny, pFilter->nu);
       AllocMatrix (&pFilter->q, pFilter->nu, pFilter->nu);
     }
-
-#ifdef RTAI
-  pFilter->iPiv = (int *) kmalloc (pFilter->ny, sizeof (int));
-#else
-  pFilter->iPiv = (int *) calloc (pFilter->ny, sizeof (int));
-  
-  if (pFilter->iPiv == NULL)	{
-    fprintf (stderr, "MultiSensorFilterInit : Not enough memory !\n");
-    exit (-1);
-  }
-#endif
 }
 
 void SensorAllocMatrices (MultiSensorInfoFilter *pFilter, int sensor_id)
@@ -781,11 +741,6 @@ void  MultiSensorFilterFree (MultiSensorInfoFilter *pFilter)
     DeleteMatrix (&pFilter->G);
     DeleteMatrix (&pFilter->q);
   }
-#ifdef RTAI
-  kfree (&pFilter->iPiv);
-#else
-  if(pFilter->iPiv != NULL) free (pFilter->iPiv);
-#endif
   for(i = 0; i < pFilter->sensorNr; i++) SensorFreeMatrices(pFilter,i);
 }
 
@@ -811,10 +766,6 @@ SensorInformation *GetSensorInfoPtr (MultiSensorInfoFilter	*pFilter, int idx)
 #if 1
 void MultiSensorFilterStatePrediction(MultiSensorInfoFilter *pFilter)
 {
-
-  //  int iPiv[100];
- 
-
   /* PROCESS MATRICES CALCULATION , F(k)=F[(ex(k-1),u(k)], Q(k)=Q[ex(k-1),u(k)],
    Jacobians of the nonlinear state equations*/
   if (pFilter->Compute_F_Matrix != NULL) {
@@ -839,7 +790,7 @@ void MultiSensorFilterStatePrediction(MultiSensorInfoFilter *pFilter)
     /* use previous state prediction and multiply with the system gain */
     Y_Eq_AX (&pFilter->F, &pFilter->ex, &pFilter->px);   //ex(k|k-1)=Fe(x|x-1)
   }
-  else { 
+  else {
     //fprintf(stderr, "USING NON-LINEAR PREDICTION!\n");
     CopyRawMatrix (&pFilter->ex, &pFilter->px);     // They have the same size then copy raw
     (*pFilter->Compute_NonLinear_Prediction) (pFilter, &pFilter->px);      //ex(k|k-1)=f[k,ex(k-1|k-1)]
@@ -860,8 +811,8 @@ void MultiSensorFilterStatePrediction(MultiSensorInfoFilter *pFilter)
 
   /*======== INFORMATION STATE PREDICTION -> y(k|k-1)=P(k|k-1)e(k|k-1) */
   CopyRawMatrix (&pFilter->pP, &pFilter->ipP);     // They have the same size then copy raw
-  ComputeInverse (&pFilter->ipP, pFilter->iPiv);   // ipP = !pP
-  //ComputeInverse (&pFilter->ipP, iPiv);   // ipP = !pP
+  ComputeInverse (&pFilter->ipP);           // ipP = !pP
+  //ComputeInverse (&pFilter->ipP);   // ipP = !pP
 
   //PrintMatrixStderr(&pFilter->ipP, "ipP");
 
@@ -870,8 +821,8 @@ void MultiSensorFilterStatePrediction(MultiSensorInfoFilter *pFilter)
   //Y_Eq_AX (&pFilter->ipP, &pFilter->pP, &pFilter->Tmp);  // py = ipP*e(k|k-1)
   //  C_Eq_AB (&pFilter->ipP, &pFilter->pP, &pFilter->Tmp);  // py = ipP*e(k|k-1)
   //PrintMatrixStderr(&pFilter->Tmp, "ipP*pP");
-  
-  
+
+
   /* [km] information state prediction */
   Y_Eq_AX (&pFilter->ipP, &pFilter->px, &pFilter->py);  // py = ipP*e(k|k-1)
   //PrintMatrixStderr(&pFilter->py, "py_STATE_PREDICTION");
@@ -882,7 +833,7 @@ void MultiSensorFilterStatePrediction(MultiSensorInfoFilter *pFilter)
 
 
 
-#if 0 //km unnecessary steps in the State prediction 
+#if 0 //km unnecessary steps in the State prediction
 void MultiSensorFilterStatePrediction(MultiSensorInfoFilter *pFilter)
 {
 
@@ -921,9 +872,9 @@ void MultiSensorFilterStatePrediction(MultiSensorInfoFilter *pFilter)
 
      //A_Eq_APlusB  (&pFilter->ex, &pFilter->q);
      //     PrintMatrixStderr(&pFilter->q, "EX_SIMPLE");
-     
 
-     /* ==== STATE PREDICTION 
+
+     /* ==== STATE PREDICTION
 	-> in linear case, the state ey from previous step can be used direclty */
   if (pFilter->Compute_NonLinear_Prediction == NULL)
   {
@@ -941,7 +892,7 @@ void MultiSensorFilterStatePrediction(MultiSensorInfoFilter *pFilter)
 
   /* INFORMATION STATE PREDICTION */
   CopyRawMatrix (&pFilter->pP, &pFilter->ipP);     // They have the same size then copy raw
-  ComputeInverse (&pFilter->ipP, pFilter->iPiv);   // ipP = !pP
+  ComputeInverse (&pFilter->ipP);   // ipP = !pP
 
 
   /* [km] information state prediction */
@@ -974,18 +925,18 @@ int MultiSensorFilterStateUpdate(MultiSensorInfoFilter *pFilter, unsigned char s
       // fprintf(stderr, "ENTERED THE MULTISENSOR MEASUREMENT UPDATE!\n");
 	// Clear upd_y and upd_invP
       /* [km] the current innovations to the global filter state
-	 are considered here "incremental", so the upd_y and upd_invP 
+	 are considered here "incremental", so the upd_y and upd_invP
 	 are set to zero in the start */
-      /* [km] the idea behind this incrmental update is that 
+      /* [km] the idea behind this incrmental update is that
 	 we could update the global filter's state with more
 	 then one sensor in the current function call (defined by the sensorMask) */
 
       ZeroMatrix (&pFilter->upd_y);
       ZeroMatrix (&pFilter->upd_invP);
-      
+
 
       //  PrintMatrix(&pFilter->ex, "EX_MEASUREMENT_UPDATE_BEGIN");
-	
+
 	for (i = 0; i < pFilter->sensorNr; i++)
 	{
 	  /* [km] selecting out a specific sensor with the sensorMask */
@@ -994,7 +945,7 @@ int MultiSensorFilterStateUpdate(MultiSensorInfoFilter *pFilter, unsigned char s
 #ifdef VERBOSE
 			printf ("State update for : %s\n", pFilter->Sensors[i].name);
 #endif
-			  
+
 			//		fprintf(stderr, "COMPUTING MEASUREMENT STRUCTURES!\n");
 			res = (*pFilter->Sensors[i].Compute_H_R_zp) ((void *) pFilter); // Call the specific function for the sensor
                   /* Check if the measurement has been validated */
@@ -1003,7 +954,7 @@ int MultiSensorFilterStateUpdate(MultiSensorInfoFilter *pFilter, unsigned char s
 			  return 0;
 			}
 
-		  
+
                   // iR must be also computed once if it is static
 			// Compute iR if R changes
 
@@ -1011,16 +962,16 @@ int MultiSensorFilterStateUpdate(MultiSensorInfoFilter *pFilter, unsigned char s
 		     however, if not, the inverse of R, iR is computed on-line */
 		  //fprintf(stderr, "IS STATIC!\n");
 
-		  
+
 			if (!pFilter->Sensors[i].isRStatic)
 			  {
 			    //		    PrintMatrixStderr(&pFilter->Sensors[i].R, "R");
 			    //			    fprintf(stderr, "THE MEASUREMENT NOISE MATRIX IS NOT CONSTANT -> has to be computed on-line!\n");
 			    CopyRawMatrix (&pFilter->Sensors[i].R, &pFilter->Sensors[i].iR);  	// They have the same size then copy raw
-			    ComputeInverse (&pFilter->Sensors[i].iR, pFilter->iPiv);   // iR = !iR
+			    ComputeInverse (&pFilter->Sensors[i].iR);   // iR = !iR
 			    //PrintMatrixStderr(&pFilter->Sensors[i].iR, "iR");
 			  }
-			
+
 			/*
 			PrintMatrixStderr(&pFilter->Sensors[i].zp, "ZP_BEFORE");
 			PrintMatrixStderr(&pFilter->Sensors[i].R, "R");
@@ -1034,17 +985,17 @@ int MultiSensorFilterStateUpdate(MultiSensorInfoFilter *pFilter, unsigned char s
 			// Ht_iR = Ht iR
 			C_Eq_AtB (&pFilter->Sensors[i].H, &pFilter->Sensors[i].iR, &pFilter->Sensors[i].Ht_iR);
 			//PrintMatrixStderr(&pFilter->Sensors[i].Ht_iR, "Ht_iR");
-			
+
 			// upd_y = upd_y + Ht_iR zp
 			Y_Eq_AX_Plus_Y (&pFilter->Sensors[i].Ht_iR, &pFilter->Sensors[i].zp, &pFilter->upd_y);
-			
-			
+
+
 			//PrintMatrixStderr(&pFilter->upd_y, "upd_y");
-			
+
 			// upd_invP = upd_invP + Ht_iR H
 			/* [km] updated information matrix */
 			C_Eq_ABPlusC (&pFilter->Sensors[i].Ht_iR, &pFilter->Sensors[i].H, &pFilter->upd_invP);
-			
+
 			//PrintMatrixStderr(&pFilter->upd_invP, "upd_invP");
 		}
 	}
@@ -1076,7 +1027,7 @@ int MultiSensorFilterStateUpdate(MultiSensorInfoFilter *pFilter, unsigned char s
 	CopyRawMatrix (&pFilter->iP, &pFilter->P);
 	//PrintMatrixStderr(&pFilter->iP, "iP_MEASUREMENT_UPDATE");
 	//P=i(iP)
-	ComputeInverse (&pFilter->P, pFilter->iPiv);
+	ComputeInverse (&pFilter->P);
 	//PrintMatrixStderr(&pFilter->P, "P_MEASUREMENT_UPDATE");
 
 	//	PrintMatrixStderr (&pFilter->ex, "EX_BEFORE");
