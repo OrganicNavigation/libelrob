@@ -269,7 +269,7 @@ void Time_PrintDate(FILE *ostrm, TIMEVAL tv)
 {
   struct tm date;
   Time_DateFromTimeval(tv, &date);
-  fprintf(ostrm, asctime(&date));
+  fprint(ostrm, asctime(&date));
 }
 
 /** Return a date compatible with the geomag library. -1 in case of failure */

@@ -7,7 +7,7 @@ extern "C" {
 
 #include <stdio.h>
 /*#include "Etime.h"*/
-#include "libgps_struct.h"
+#include "gps.h"
 
 #define GGA_STR_LEN 75  /* including margins */
 #define RMC_STR_LEN 75  /* including margins */

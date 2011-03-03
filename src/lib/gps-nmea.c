@@ -11,7 +11,7 @@
 #include "Emacros.h"
 #include "Edebug.h"
 #include "gps-nmea.h"
-#include "libgps.h"
+#include "gps.h"
 
 const char GPS_GPS_FIX[7][64]={"fix not available","GPS fix","Differential GPS fix","","","","Estimated(DR) fix"};
 const char GPS_AXIS_FMT[] = "%lf\t%lf\t%lf\t";
@@ -323,7 +323,7 @@ int GPS_Parse_GGA(GPS_gga *gga, char *line, TIMEVAL stamp)
   gga->meas_id += 1;
 
   if(strlen(line) < 42) {
-    fprintf(stderr, "gga: strlen=%d\n is less than 42!\n", strlen(line));
+    fprintf(stderr, "gga: strlen=%d\n is less than 42!\n", (uint)strlen(line));
     return 0;
   }
 

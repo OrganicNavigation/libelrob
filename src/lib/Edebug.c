@@ -77,7 +77,7 @@ void EERR(const char *format, ...)
   vsprintf(p, format, ap);
   va_end(ap);
 
-  fprintf(stderr,p);
+  fprint(stderr,p);
 }
 
 #ifdef __cplusplus

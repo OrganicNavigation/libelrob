@@ -12,9 +12,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "libgps.h"
 #include "Edebug.h"
 #include "Emacros.h"
+
+#include "gps.h"
 
 #ifndef E_MAP_POINT
 #define E_MAP_POINT(mat,point) (mat).nRow = 3; (mat).nCol = 1; (mat).Element = (double *) (&point)
