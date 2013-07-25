@@ -23,12 +23,12 @@ remake_doc(
 )
 
 remake_pack_deb(
-  DEPENDS libgsl0-dev
+  DEPENDS libgsl0ldbl
 )
 remake_pack_deb(
   COMPONENT dev
   DESCRIPTION "development headers"
-  DEPENDS libelrob libgsl0-dev
+  DEPENDS libelrob
 )
 remake_pack_deb(
   ARCH all
@@ -40,13 +40,13 @@ remake_distribute_deb(
   DISTRIBUTION lucid
   SECTION libs
   UPLOAD ppa:kralf/asl
-  DEPENDS libgsl0-dev remake doxygen
+  DEPENDS libgsl0-dev remake pkg-config doxygen
   PASS CMAKE_BUILD_TYPE LIBELROB_GIT_REVISION
 )
 remake_distribute_deb(
   DISTRIBUTION precise
   SECTION libs
   UPLOAD ppa:kralf/asl
-  DEPENDS libgsl0-dev remake doxygen
+  DEPENDS libgsl0-dev remake pkg-config doxygen
   PASS CMAKE_BUILD_TYPE LIBELROB_GIT_REVISION
 )
