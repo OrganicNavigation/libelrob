@@ -12,7 +12,7 @@ remake_project(
   AUTHOR "Dizan Vasquez"
   AUTHOR "Ralf Kaestner"
   CONTACT "ralf.kaestner@gmail.com"
-  HOME "http://aslforge.ethz.ch/projects/libelrob"
+  HOME "http://github.com/kralf/libelrob"
   LICENSE "GNU Lesser General Public License (LGPL)"
   PREFIX elrob-
   INSTALL /usr
@@ -23,15 +23,30 @@ remake_doc(
 )
 
 remake_pack_deb(
-  libelrob
+  DEPENDS libgsl0-dev
 )
 remake_pack_deb(
   COMPONENT dev
   DESCRIPTION "development headers"
-  libelrob
+  DEPENDS libelrob libgsl0-dev
 )
 remake_pack_deb(
   ARCH all
   COMPONENT doc
   DESCRIPTION "documentation"
+)
+
+remake_distribute_deb(
+  DISTRIBUTION lucid
+  SECTION libs
+  UPLOAD ppa:kralf/asl
+  DEPENDS libgsl0-dev remake doxygen
+  PASS CMAKE_BUILD_TYPE LIBELROB_GIT_REVISION
+)
+remake_distribute_deb(
+  DISTRIBUTION precise
+  SECTION libs
+  UPLOAD ppa:kralf/asl
+  DEPENDS libgsl0-dev remake doxygen
+  PASS CMAKE_BUILD_TYPE LIBELROB_GIT_REVISION
 )
