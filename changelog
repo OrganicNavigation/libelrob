@@ -1,3 +1,9 @@
+libelrob (0.1-10) unstable; urgency=low
+
+  * Release distribution for Ubuntu Trusty Tahr
+
+ -- Ralf Kaestner <ralf.kaestner@gmail.com>  Thu, 25 Sep 2014 17:07:00 +0100
+ 
 libelrob (0.1-9) unstable; urgency=low
 
   * Added pkg-config file
